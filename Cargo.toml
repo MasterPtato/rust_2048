@@ -1,0 +1,18 @@
+[package]
+name = "twenty"
+version = "0.1.0"
+authors = ["MasterPtato <max.is.idk@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+piston = "0.49.0"
+piston2d-graphics = "0.36.0"
+piston2d-opengl_graphics = "0.72.0"
+piston_window = "0.107.0"
+graphics_buffer = { version = "0.7.2", features = ['piston_window_texture'] }
+rand = "0.7.3"
+
+[patch.crates-io]
+graphics_buffer = { path = "patches/graphics_buffer", features = ['piston_window_texture'], version = "0.7.2" } # Fix deps
