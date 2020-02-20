@@ -40,9 +40,6 @@ impl App {
 		}
 
 		render_ctx.dt = render_ctx.avg.iter().sum::<f64>() / render_ctx.avg.len() as f64;
-		
-		// Determine the fps from the last 15 frames (average doesnt jump as much thus is more readable)
-		// let fps = render_ctx.avg.len() as f64 / render_ctx.avg.iter().sum::<f64>();
 
 		let board = &mut self.board;
 
@@ -52,9 +49,6 @@ impl App {
 
 			// Render the playing board
 			board.render(render_ctx, ctx, gl);
-
-			// // Render fps counter
-			// text(RED, 16, &format!("FPS {:.1}", fps), &mut render_ctx.glyphs.fira_code_reg, transform, gl).unwrap();
 
 			// Get text transform
 			let transform = ctx.transform
@@ -67,7 +61,14 @@ impl App {
 			let transform = ctx.transform
 				.trans(15.0, 95.0);
 
-			multi_line_text(TEXT_COLOR, 25, "Combine the tiles by\nsliding the board with\nWASD or arrow keys", &mut render_ctx.glyphs.brandon_blk, transform, gl);
+			multi_line_text(
+				TEXT_COLOR,
+				25,
+				"Combine the tiles by\nsliding the board with\nWASD or arrow keys",
+				&mut render_ctx.glyphs.brandon_blk,
+				transform,
+				gl
+			);
 
 			// Update glyphs before rendering
 			render_ctx.glyphs.fira_code_reg.factory.encoder.flush(device);
@@ -144,11 +145,8 @@ impl App {
 		// Start event handler at 60 UPS
 		let mut events = Events::new(EventSettings::new().ups(60));
 
-		// Spawn 1 tile to the board
+		// Spawn 1 tile on the board
 		self.board.spawn_tile();
-		// self.board.spawn_tile();
-		// self.board.spawn_tile();
-		// self.board.spawn_tile();
 
 		// Initiate events
     	while let Some(e) = events.next(&mut self.window) {

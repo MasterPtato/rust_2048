@@ -76,6 +76,7 @@ impl PlayBoard {
 			Some(pos) => {
 				let mut rng = thread_rng();
 				self.tiles[pos.y as usize][pos.x as usize].value = rng.gen_range(0, 2);
+				self.tiles[pos.y as usize][pos.x as usize].scale = 1.1;
 			},
 			_ => ()
 		}
@@ -137,6 +138,7 @@ impl PlayBoard {
 		if self.state != BoardState::Idle { return; }
 
 		match direction {
+			// Slide playing board to the left
 			Direction::Left => 
 				for y in 0..self.board_size {
 					for x in 0..self.board_size {
@@ -174,6 +176,7 @@ impl PlayBoard {
 						}
 					}
 				},
+			// Slide playing board to the right
 			Direction::Right => 
 				for y in 0..self.board_size {
 					for x2 in 0..self.board_size {
@@ -215,6 +218,7 @@ impl PlayBoard {
 						}
 					}
 				},
+			// Slide playing board upwards
 			Direction::Up => 
 				for y in 0..self.board_size {
 					for x in 0..self.board_size {
@@ -233,7 +237,6 @@ impl PlayBoard {
 							let walker_u = walker as usize;
 							if tiles[walker_u][x].value != 99 || tiles[walker_u][x].occupied != 99 {
 								// If both tiles have the same value and the tile is not `taken`, enable the combine flag
-								println!("{:?} {:?}", tiles[walker_u][x], tiles[y][x].value);
 								if (tiles[walker_u][x].value == tiles[y][x].value || tiles[walker_u][x].occupied == tiles[y][x].value)
 								   && !tiles[walker_u][x].taken {
 									combine = true;
@@ -249,12 +252,53 @@ impl PlayBoard {
 						}
 
 						// Check if the tile can move to another location
-						if walker as usize != x {
+						if walker as usize != y {
 							self.spawn_moving_tile_vertical(x, y, walker, combine);
 						}
 					}
 				},
-			_ => ()
+			// Slide playing board downwards
+			Direction::Down => 
+				for y2 in 0..self.board_size {
+					for x in 0..self.board_size {
+						let tiles = &self.tiles;
+
+						// Makes iteration through columns go in the opposite direction
+						let y = self.board_size - y2 - 1;
+
+						// Skip if tile is empty
+						if tiles[y][x].value == 99 { continue; }
+
+						let mut walker = y as i32;
+						let mut combine = false;
+						
+						// Check if the tile to the left is occupied or not in a loop
+						while walker < self.board_size as i32 - 1 {
+							walker += 1;
+
+							let walker_u = walker as usize;
+							if tiles[walker_u][x].value != 99 || tiles[walker_u][x].occupied != 99 {
+								// If both tiles have the same value and the tile is not `taken`, enable the combine flag
+								if (tiles[walker_u][x].value == tiles[y][x].value || tiles[walker_u][x].occupied == tiles[y][x].value)
+								   && !tiles[walker_u][x].taken {
+									combine = true;
+								}
+								// Move walker back 1 step
+								else {
+									walker -= 1;
+								}
+
+								// Break from loop if a tile is found
+								break;
+							}
+						}
+
+						// Check if the tile can move to another location
+						if walker as usize != y {
+							self.spawn_moving_tile_vertical(x, y, walker, combine);
+						}
+					}
+				}
 		}
 
 		// Set board state to `moving` so that no more inputs are applied
@@ -270,6 +314,7 @@ impl PlayBoard {
 
 				if tile.combine {
 					destination.value = tile.value + 1;
+					destination.scale = 1.2;
 
 					// Increment score
 					self.score += 2u32.pow(tile.value as u32 + 2);
@@ -326,5 +371,17 @@ impl PlayBoard {
 		// Render high score
 		text(TEXT_COLOR, 22, &format!("High score: {:?}", self.highscore), &mut render_ctx.glyphs.brandon_blk, transform.trans(280.0, 0.0), gl)
 			.expect("Failed to draw text");
+	}
+
+	pub fn reset_board(&mut self) {
+		// Set board to empty tiles
+		for y in 0..self.board_size {
+			for x in 0..self.board_size {
+				self.tiles[y][x].reset();
+			}
+		}
+
+		// Spawn 1 random tile
+		self.spawn_tile();
 	}
 }

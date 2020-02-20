@@ -8,6 +8,7 @@ use crate::utils::{Vector, RenderContext};
 #[derive(Debug)]
 pub struct Tile {
 	position: Vector,
+	pub scale: f64,
 	pub value: usize,
 	pub occupied: usize,
 	pub taken: bool
@@ -18,6 +19,7 @@ impl Tile {
 	pub fn new(x: f64, y: f64, value: usize) -> Self {
 		Tile {
 			position: Vector::new(x, y),
+			scale: 1.0,
 			value: value,
 			occupied: value,
 			taken: false
@@ -28,6 +30,7 @@ impl Tile {
 	pub fn empty(x: f64, y: f64) -> Self {
 		Tile {
 			position: Vector::new(x, y),
+			scale: 1.0,
 			value: 99,
 			occupied: 99,
 			taken: false
@@ -40,7 +43,14 @@ impl Tile {
 			.trans(self.position.x * PlayBoard::PADDED_TILE_SIZE, self.position.y * PlayBoard::PADDED_TILE_SIZE)
 			.trans(render_ctx.window_size[0] / 2.0, render_ctx.window_size[1] / 2.0)
 			.trans(render_ctx.board_size[0], render_ctx.board_size[1])
+			.scale(self.scale, self.scale)
 			.trans(-48.0, -48.0);
+
+
+		// If the tile's scale is more than 1, make it 1
+		if self.scale > 1.0 {
+			self.scale = (self.scale - 4.0 * render_ctx.dt).max(1.0);
+		}
 
 		// Check if this tile is an empty one
 		if self.value == 99 || self.value == 98 {
@@ -53,6 +63,12 @@ impl Tile {
 			// Draw tile
 			image(&render_ctx.textures.nums[self.value], transform, gl);
 		}
+	}
+
+	pub fn reset(&mut self) {
+		self.taken = false;
+		self.occupied = 99;
+		self.value = 99;
 	}
 }
 
