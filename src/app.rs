@@ -47,9 +47,6 @@ impl App {
 			// Clear the screen
 			clear(BG_COLOR, gl);
 
-			// Render the playing board
-			board.render(render_ctx, ctx, gl);
-
 			// Get text transform
 			let transform = ctx.transform
 				.trans(60.0, 70.0);
@@ -61,6 +58,7 @@ impl App {
 			let transform = ctx.transform
 				.trans(15.0, 95.0);
 
+			// Render instructions
 			multi_line_text(
 				TEXT_COLOR,
 				25,
@@ -69,6 +67,9 @@ impl App {
 				transform,
 				gl
 			);
+
+			// Render the playing board
+			board.render(render_ctx, ctx, gl);
 
 			// Update glyphs before rendering
 			render_ctx.glyphs.fira_code_reg.factory.encoder.flush(device);
@@ -112,6 +113,10 @@ impl App {
 
 					self.board.slide(Direction::Down);
 				}
+			},
+			// Reset game on SPACEBAR press
+			Keyboard(Key::Space) => {
+				self.board.reset();
 			},
 			_ => ()
 		}

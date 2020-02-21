@@ -2,18 +2,21 @@ use piston::input::UpdateArgs;
 use piston_window::{Context, G2d};
 use rand::{thread_rng, Rng};
 use graphics::*;
+use std::cmp;
 
 use crate::{
-	utils::{Vector, RenderContext, Direction, Rgba},
+	utils::{Vector, RenderContext, Direction, Rgba, multi_line_text},
 	tile::{Tile, MovingTile}
 };
 
 const TEXT_COLOR: Rgba = [0.463, 0.431, 0.400, 1.0];
+const TR_WHITE: Rgba = [1.0, 1.0, 1.0, 0.5];
 
 #[derive(PartialEq)]
 enum BoardState {
 	Idle,
-	Moving
+	Moving,
+	GameOver
 }
 
 pub struct PlayBoard {
@@ -305,6 +308,76 @@ impl PlayBoard {
 		self.state = BoardState::Moving;
 	}
 
+	fn game_over(&self) -> bool {
+		for y in 0..(self.board_size - 1) {
+			for x in 0..self.board_size {
+				// Check for a match to the right
+				if x < self.board_size - 1 {
+					if self.tiles[y][x].value == self.tiles[y][x + 1].value {
+						return false;
+					}
+				}
+
+				// Check for a match below
+				if self.tiles[y][x].value == self.tiles[y + 1][x].value {
+					return false;
+				}
+			}
+		}
+
+		true
+	}
+
+	pub fn render(&mut self, render_ctx: &mut RenderContext, ctx: Context, gl: &mut G2d) {
+		// Render tiles
+		for row in &mut self.tiles {
+			for tile in row {
+				tile.render(render_ctx, ctx, gl);
+			}
+		}
+
+		// Render moving tiles
+		for tile in &mut self.moving_tiles {
+			tile.render(render_ctx, ctx, gl);
+		}
+
+		// Get text transform
+		let transform = ctx.transform
+			.trans(245.0, 28.0);
+
+		// Render current score
+		text(TEXT_COLOR, 22, &format!("Score: {:?}", self.score), &mut render_ctx.glyphs.brandon_blk, transform, gl)
+			.expect("Failed to draw text");
+
+		// Render high score
+		text(TEXT_COLOR, 22, &format!("High score: {:?}", self.highscore), &mut render_ctx.glyphs.brandon_blk, transform.trans(280.0, 0.0), gl)
+			.expect("Failed to draw text");
+
+		// Draw `GameOver` overlay and text
+		if self.state == BoardState::GameOver {
+			// Draw overlay
+			rectangle(TR_WHITE, [0.0, 0.0, render_ctx.window_size[0], render_ctx.window_size[1]], ctx.transform, gl);
+
+			// Get text transform
+			let transform = ctx.transform
+				.trans(render_ctx.window_size[0] / 2.0 - 80.0, 200.0);
+
+			// "GAME OVER" banner
+			text(TEXT_COLOR, 35, "Game Over!", &mut render_ctx.glyphs.brandon_blk, transform, gl)
+				.expect("Failed to draw text");
+
+			// Retry banner
+			multi_line_text(
+				TEXT_COLOR,
+				25,
+				&format!("            Score: {:?}\n\nRetry by pressing SPACE", self.score),
+				&mut render_ctx.glyphs.brandon_blk,
+				transform.trans(-35.0, 60.0),
+				gl
+			);
+		}
+	}
+
 	pub fn update(&mut self, _args: &UpdateArgs) {
 		// Update all moving tiles
 		for tile in &mut self.moving_tiles {
@@ -343,43 +416,29 @@ impl PlayBoard {
 				self.spawn_tile();
 			}
 
-			// TODO: Check if the game is over
-		}
-	}
+			// Check if the game is over
+			if let None = self.get_empty_tile() {
+				if self.game_over() {
+					self.state = BoardState::GameOver;
 
-	pub fn render(&mut self, render_ctx: &mut RenderContext, ctx: Context, gl: &mut G2d) {
-		// Render tiles
-		for row in &mut self.tiles {
-			for tile in row {
-				tile.render(render_ctx, ctx, gl);
+					// Set new highscore (if applicable)
+					self.highscore = cmp::max(self.score, self.highscore);
+				}
 			}
 		}
-
-		// Render moving tiles
-		for tile in &mut self.moving_tiles {
-			tile.render(render_ctx, ctx, gl);
-		}
-
-		// Get text transform
-		let transform = ctx.transform
-			.trans(245.0, 28.0);
-
-		// Render current score
-		text(TEXT_COLOR, 22, &format!("Score: {:?}", self.score), &mut render_ctx.glyphs.brandon_blk, transform, gl)
-			.expect("Failed to draw text");
-
-		// Render high score
-		text(TEXT_COLOR, 22, &format!("High score: {:?}", self.highscore), &mut render_ctx.glyphs.brandon_blk, transform.trans(280.0, 0.0), gl)
-			.expect("Failed to draw text");
 	}
 
-	pub fn reset_board(&mut self) {
+	pub fn reset(&mut self) {
 		// Set board to empty tiles
 		for y in 0..self.board_size {
 			for x in 0..self.board_size {
 				self.tiles[y][x].reset();
 			}
 		}
+
+		// Reset score and state
+		self.score = 0;
+		self.state = BoardState::Idle;
 
 		// Spawn 1 random tile
 		self.spawn_tile();
