@@ -26,6 +26,24 @@ pub enum Direction {
 	Down
 }
 
+impl Direction {
+	pub fn displacement(&self) -> (isize, isize) {
+		match self {
+			Direction::Left => (-1, 0),
+			Direction::Right => (1, 0),
+			Direction::Up => (0, -1),
+			Direction::Down => (0, 1)
+		}
+	}
+
+	pub fn is_negative(&self) -> bool {
+		match self {
+			Direction::Right | Direction::Down => false,
+			Direction::Left | Direction::Up => true
+		}
+	}
+}
+
 pub struct ToggleKey {
 	pub pressed: bool,
 	pub released: bool

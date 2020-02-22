@@ -1,4 +1,3 @@
-use piston::input::{UpdateArgs};
 use piston_window::{Context, G2d};
 use graphics::*;
 
@@ -53,7 +52,7 @@ impl Tile {
 		}
 
 		// Check if this tile is an empty one
-		if self.value == 99 || self.value == 98 {
+		if self.value == 99 {
 			// Draw empty tile
 			if let Some(texture) = &render_ctx.textures.empty_tile {
 				image(texture, transform, gl);

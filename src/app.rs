@@ -135,8 +135,10 @@ impl App {
 
 	pub fn init(&mut self) {
 		// Load ttf fonts
-		let fcreg = self.window.load_font("./assets/FiraCode-Regular.ttf").unwrap();
-		let bblk = self.window.load_font("./assets/Brandon_blk.ttf").unwrap();
+		let fcreg = self.window.load_font("./assets/FiraCode-Regular.ttf")
+			.expect("Could not load font asset");
+		let bblk = self.window.load_font("./assets/Brandon_blk.ttf")
+			.expect("Could not load font asset");
 
 		// Create a new render context
 		let mut render_ctx = RenderContext::new(&mut self.window, GlyphsStorage {
@@ -145,7 +147,7 @@ impl App {
 		});
 
 		// Store the board size offset in the render context
-		render_ctx.board_size = [self.board.board_size as f64 * -15.0, self.board.board_size as f64 * -41.0];
+		render_ctx.board_size = [self.board.board_size() as f64 * -15.0, self.board.board_size() as f64 * -41.0];
 
 		// Start event handler at 60 UPS
 		let mut events = Events::new(EventSettings::new().ups(60));

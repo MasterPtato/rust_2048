@@ -22,7 +22,7 @@ enum BoardState {
 pub struct PlayBoard {
 	tiles: Vec<Vec<Tile>>,
 	moving_tiles: Vec<MovingTile>,
-	pub board_size: usize,
+	board_size: usize,
 	state: BoardState,
 	score: u32,
 	highscore: u32
@@ -85,223 +85,108 @@ impl PlayBoard {
 		}
 	}
 
-	fn spawn_moving_tile(&mut self, x: usize, y: usize, walker: i32, combine: bool) {
-		let row = &mut self.tiles[y];
-
-		// Spawn a moving tile
-		self.moving_tiles.push(MovingTile::new(
-			x as f64,
-			y as f64,
-			walker as f64,
-			y as f64,
-			row[x].value,
-			combine
-		));
-		
-		// Set destination tile to `taken` if it will be combined with
-		if combine {
-			row[walker as usize].taken = true;
-		}
-
-		// Set destination tile's `occupied` value to the tile's value so that other moving tiles can combine with it 
-		row[walker as usize].occupied = row[x].value;
-
-		// Reset current tile
-		row[x].value = 99;
-		row[x].occupied = 99;
-	}
-
-	fn spawn_moving_tile_vertical(&mut self, x: usize, y: usize, walker: i32, combine: bool) {
+	fn spawn_moving_tile(&mut self, x: isize, y: isize, direction: &Direction, walker: isize, combine: bool) {
 		let tiles = &mut self.tiles;
 
+		// Get destination position
+		let (dx, dy) = direction.displacement();
+		let (walker_x, walker_y) = (
+			(x + walker * dx) as usize,
+			(y + walker * dy) as usize);
+
+		// Get position as usize
+		let ux = x as usize;
+		let uy = y as usize;
+
 		// Spawn a moving tile
 		self.moving_tiles.push(MovingTile::new(
 			x as f64,
 			y as f64,
-			x as f64,
-			walker as f64,
-			tiles[y][x].value,
+			walker_x as f64,
+			walker_y as f64,
+			tiles[uy][ux].value,
 			combine
 		));
 		
 		// Set destination tile to `taken` if it will be combined with
 		if combine {
-			tiles[walker as usize][x].taken = true;
+			tiles[walker_y][walker_x].taken = true;
 		}
 
 		// Set destination tile's `occupied` value to the tile's value so that other moving tiles can combine with it 
-		tiles[walker as usize][x].occupied = tiles[y][x].value;
+		tiles[walker_y][walker_x].occupied = tiles[uy][ux].value;
 
 		// Reset current tile
-		tiles[y][x].value = 99;
-		tiles[y][x].occupied = 99;
+		tiles[uy][ux].value = 99;
+		tiles[uy][ux].occupied = 99;
 	}
 
 	pub fn slide(&mut self, direction: Direction) {
 		if self.state != BoardState::Idle { return; }
 
-		match direction {
-			// Slide playing board to the left
-			Direction::Left => 
-				for y in 0..self.board_size {
-					for x in 0..self.board_size {
-						let row = &mut self.tiles[y];
+		// Get vector displacement from direction
+		let (dx, dy) = direction.displacement();
 
-						// Skip if tile is empty
-						if row[x].value == 99 { continue; }
+		for y in 0..self.board_size {
+			for x in 0..self.board_size {
+				let tiles = &self.tiles;
 
-						let mut walker = x as i32;
-						let mut combine = false;
-						
-						// Check if the tile to the left is occupied or not in a loop
-						while walker > 0 {
+				// Get x and y position of tile
+				let ix =
+					if dx == 1 { (self.board_size - x - 1) as isize }
+					else { x as isize };
+				let iy =
+					if dy == 1 { (self.board_size - y - 1) as isize }
+					else { y as isize };
+
+
+				// Skip if tile is empty
+				if tiles[iy as usize][ix as usize].value == 99 { continue; }
+
+				// Makes iteration through columns go in the opposite direction
+				let mut walker: isize = 0;
+				let mut combine = false;
+
+				// Find the max walking distance for the walker
+				let max_walk =
+					if direction.is_negative() {
+						cmp::max(ix * dx.abs(), iy * dy.abs())
+					}
+					else {
+						self.board_size as isize - cmp::max(ix * dx, iy * dy) - 1
+					};
+				
+				// Check if the tile to the left is occupied or not in a loop
+				while walker < max_walk {
+					walker += 1;
+
+					let (walker_x, walker_y) = (
+						(ix + walker * dx) as usize,
+						(iy + walker * dy) as usize);
+					
+					// Check if the tile is not empty
+					if tiles[walker_y][walker_x].value != 99 || tiles[walker_y][walker_x].occupied != 99 {
+						// If both tiles have the same value and the tile is not `taken`, enable the combine flag
+						if (tiles[walker_y][walker_x].value == tiles[iy as usize][ix as usize].value || 
+							tiles[walker_y][walker_x].occupied == tiles[iy as usize][ix as usize].value)
+						    && !tiles[walker_y][walker_x].taken {
+							combine = true;
+						}
+						// Move walker back 1 step
+						else {
 							walker -= 1;
-
-							if row[walker as usize].value != 99 || row[walker as usize].occupied != 99 {
-								// If both tiles have the same value and the tile is not `taken`, enable the combine flag
-								if (row[walker as usize].value == row[x].value || row[walker as usize].occupied == row[x].value)
-								   && !row[walker as usize].taken {
-									combine = true;
-								}
-								// Move walker back 1 step
-								else {
-									walker += 1;
-								}
-
-								// Break from loop if a tile is found
-								break;
-							}
 						}
 
-						// Check if the tile can move to another location
-						if walker as usize != x {
-							self.spawn_moving_tile(x, y, walker, combine);
-						}
-					}
-				},
-			// Slide playing board to the right
-			Direction::Right => 
-				for y in 0..self.board_size {
-					for x2 in 0..self.board_size {
-						let row = &mut self.tiles[y];
-
-						// Makes iteration through rows go in the opposite direction
-						let x = self.board_size - x2 - 1;
-
-						// Skip if tile is empty
-						if row[x].value == 99 { continue; }
-
-						let mut walker = x as i32;
-						let mut combine = false;
-						
-						// Check if the tile to the right is occupied or not in a loop
-						while walker < self.board_size as i32 - 1 {
-							walker += 1;
-
-							let walker_u = walker as usize;
-							if row[walker_u].value != 99 || row[walker_u].occupied != 99 {
-								// If both tiles have the same value and the tile is not `taken`, enable the combine flag
-								if (row[walker_u].value == row[x].value || row[walker_u].occupied == row[x].value)
-								   && !row[walker_u].taken {
-									combine = true;
-								}
-								// Move walker back 1 step
-								else {
-									walker -= 1;
-								}
-
-								// Break from loop if a tile is found
-								break;
-							}
-						}
-
-						// Check if the tile can move to another location
-						if walker as usize != x {
-							self.spawn_moving_tile(x, y, walker, combine);
-						}
-					}
-				},
-			// Slide playing board upwards
-			Direction::Up => 
-				for y in 0..self.board_size {
-					for x in 0..self.board_size {
-						let tiles = &self.tiles;
-
-						// Skip if tile is empty
-						if tiles[y][x].value == 99 { continue; }
-
-						let mut walker = y as i32;
-						let mut combine = false;
-						
-						// Check if the tile to the left is occupied or not in a loop
-						while walker > 0 {
-							walker -= 1;
-
-							let walker_u = walker as usize;
-							if tiles[walker_u][x].value != 99 || tiles[walker_u][x].occupied != 99 {
-								// If both tiles have the same value and the tile is not `taken`, enable the combine flag
-								if (tiles[walker_u][x].value == tiles[y][x].value || tiles[walker_u][x].occupied == tiles[y][x].value)
-								   && !tiles[walker_u][x].taken {
-									combine = true;
-								}
-								// Move walker back 1 step
-								else {
-									walker += 1;
-								}
-
-								// Break from loop if a tile is found
-								break;
-							}
-						}
-
-						// Check if the tile can move to another location
-						if walker as usize != y {
-							self.spawn_moving_tile_vertical(x, y, walker, combine);
-						}
-					}
-				},
-			// Slide playing board downwards
-			Direction::Down => 
-				for y2 in 0..self.board_size {
-					for x in 0..self.board_size {
-						let tiles = &self.tiles;
-
-						// Makes iteration through columns go in the opposite direction
-						let y = self.board_size - y2 - 1;
-
-						// Skip if tile is empty
-						if tiles[y][x].value == 99 { continue; }
-
-						let mut walker = y as i32;
-						let mut combine = false;
-						
-						// Check if the tile to the left is occupied or not in a loop
-						while walker < self.board_size as i32 - 1 {
-							walker += 1;
-
-							let walker_u = walker as usize;
-							if tiles[walker_u][x].value != 99 || tiles[walker_u][x].occupied != 99 {
-								// If both tiles have the same value and the tile is not `taken`, enable the combine flag
-								if (tiles[walker_u][x].value == tiles[y][x].value || tiles[walker_u][x].occupied == tiles[y][x].value)
-								   && !tiles[walker_u][x].taken {
-									combine = true;
-								}
-								// Move walker back 1 step
-								else {
-									walker -= 1;
-								}
-
-								// Break from loop if a tile is found
-								break;
-							}
-						}
-
-						// Check if the tile can move to another location
-						if walker as usize != y {
-							self.spawn_moving_tile_vertical(x, y, walker, combine);
-						}
+						// Break from loop if a tile is found
+						break;
 					}
 				}
+
+				// Check if the tile can move to another location
+				if walker != 0 {
+					self.spawn_moving_tile(ix, iy, &direction, walker, combine);
+				}
+			}
 		}
 
 		// Set board state to `moving` so that no more inputs are applied
@@ -309,7 +194,7 @@ impl PlayBoard {
 	}
 
 	fn game_over(&self) -> bool {
-		for y in 0..(self.board_size - 1) {
+		for y in 0..self.board_size {
 			for x in 0..self.board_size {
 				// Check for a match to the right
 				if x < self.board_size - 1 {
@@ -319,8 +204,10 @@ impl PlayBoard {
 				}
 
 				// Check for a match below
-				if self.tiles[y][x].value == self.tiles[y + 1][x].value {
-					return false;
+				if y < self.board_size - 1 {
+					if self.tiles[y][x].value == self.tiles[y + 1][x].value {
+						return false;
+					}
 				}
 			}
 		}
@@ -442,5 +329,9 @@ impl PlayBoard {
 
 		// Spawn 1 random tile
 		self.spawn_tile();
+	}
+
+	pub fn board_size(&self) -> usize {
+		self.board_size
 	}
 }
