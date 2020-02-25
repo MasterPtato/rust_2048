@@ -76,12 +76,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bit-vec"
-version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4523a10839ffae575fb08aa3423026c8cb4687eef43952afb956229d4f246f7"
-
-[[package]]
 name = "bitflags"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -492,19 +486,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a93dba7ee3a0feeac0f437141ff25e71ce2066bcf1a706acab1559ffff94eb6a"
 dependencies = [
  "gl_generator 0.13.1",
-]
-
-[[package]]
-name = "graphics_buffer"
-version = "0.7.2"
-dependencies = [
- "bit-vec",
- "image",
- "piston-texture",
- "piston2d-graphics",
- "piston_window",
- "png",
- "rayon",
 ]
 
 [[package]]
@@ -1270,7 +1251,6 @@ dependencies = [
 name = "twenty"
 version = "0.1.0"
 dependencies = [
- "graphics_buffer",
  "piston",
  "piston2d-graphics",
  "piston2d-opengl_graphics",
